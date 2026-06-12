@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md border border-gray-700">
+        <h1 class="text-2xl font-bold mb-6 text-blue-400">Movie / TV Search</h1>
+
+        <form id="searchForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-1">Media Type</label>
+                <select id="mediaType" class="w-full bg-gray-700 border border-gray-600 rounded p-2 focus:outline-none focus:border-blue-500">
+                    <option value="movie">Movie</option>
+                    <option value="tvod">TV Show</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-1">Title</label>
+                <input type="text" id="title" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 focus:outline-none focus:border-blue-500" placeholder="Enter title...">
+            </div>
+
+            <div id="tvFields" class="hidden flex space-x-4">
+                <div class="w-1/2">
+                    <label class="block text-sm font-medium mb-1">Season</label>
+                    <input type="number" id="season" class="w-full bg-gray-700 border border-gray-600 rounded p-2 focus:outline-none focus:border-blue-500" min="1">
+                </div>
+                <div class="w-1/2">
+                    <label class="block text-sm font-medium mb-1">Episode</label>
+                    <input type="number" id="episode" class="w-full bg-gray-700 border border-gray-600 rounded p-2 focus:outline-none focus:border-blue-500" min="1">
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors duration-200">
+                Search Source
+            </button>
+        </form>
+
+        <div id="results" class="mt-6 hidden">
+            <h2 class="text-lg font-semibold mb-2 border-b border-gray-600 pb-1">Web Player Links</h2>
+            <div id="linksContainer" class="space-y-2 text-sm"></div>
+        </div>
+
+        <div id="error" class="mt-4 hidden text-red-400 text-sm font-medium p-3 bg-red-900 bg-opacity-20 border border-red-800 rounded"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('searchForm');
+        const mediaType = document.getElementById('mediaType');
+        const tvFields = document.getElementById('tvFields');
+        const submitBtn = document.getElementById('submitBtn');
+        const results = document.getElementById('results');
+        const linksContainer = document.getElementById('linksContainer');
+        const errorDiv = document.getElementById('error');
+
+        mediaType.addEventListener('change', (e) => {
+            if (e.target.value === 'tvod') {
+                tvFields.classList.remove('hidden');
+                document.getElementById('season').required = true;
+                document.getElementById('episode').required = true;
+            } else {
+                tvFields.classList.add('hidden');
+                document.getElementById('season').required = false;
+                document.getElementById('episode').required = false;
+            }
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            errorDiv.classList.add('hidden');
+            results.classList.add('hidden');
+            linksContainer.innerHTML = '';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Parsing source...';
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            const payload = {
+                media_type: mediaType.value,
+                title: document.getElementById('title').value,
+                season: document.getElementById('season').value,
+                episode: document.getElementById('episode').value
+            };
+
+            try {
+                const response = await fetch('/api/scrape', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Failed to locate media.');
+                }
+
+                if (data.data.browser_link) {
+                    linksContainer.innerHTML += `
+                        <a href="${data.data.browser_link}" target="_blank" rel="noopener noreferrer" class="block bg-gray-700 hover:bg-gray-500 p-3 rounded text-blue-300 font-semibold text-center break-all transition-colors duration-200 shadow">
+                            ▶ Open in Browser Player
+                        </a>
+                    `;
+                } else {
+                    linksContainer.innerHTML = '<p class="text-gray-400">No browser link generated.</p>';
+                }
+
+                results.classList.remove('hidden');
+
+            } catch (err) {
+                errorDiv.textContent = err.message;
+                errorDiv.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Search Source';
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        });
+    </script>
+</body>
+</html>
