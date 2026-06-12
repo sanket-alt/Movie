@@ -14,7 +14,7 @@ config.read("config/config.properties")
 class VidnodeApi(object):
     def __init__(self, media_type, title, **kwargs):
         super().__init__()
-        self.root_url = "https://gowatchseries.fm/"
+        self.root_url = "https://gowatchseries.lol/"
         self.media_type = media_type
         self.title = title
         if self.media_type == "tvod":
